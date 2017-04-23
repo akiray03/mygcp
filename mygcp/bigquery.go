@@ -57,8 +57,6 @@ func (client *Client) FetchDatasetList(includeTable bool) ([]*Dataset, error) {
 
 	it := client.bigquery.Datasets(client.ctx)
 	for {
-		dataset := &Dataset{}
-
 		ds, err := it.Next()
 		if err == iterator.Done {
 			break
@@ -67,20 +65,12 @@ func (client *Client) FetchDatasetList(includeTable bool) ([]*Dataset, error) {
 			return dslist, err
 		}
 
-		dataset.ProjectID = ds.ProjectID
-		dataset.DatasetID = ds.DatasetID
-
 		metadata, err := ds.Metadata(client.ctx)
 		if err != nil {
 			return dslist, err
 		}
-		dataset.CreationTime = metadata.CreationTime
-		dataset.LastModifiedTime = metadata.LastModifiedTime
-		dataset.DefaultTableExpiration = metadata.DefaultTableExpiration
-		dataset.Description = metadata.Description
-		dataset.Name = metadata.Name
-		dataset.Location = metadata.Location
-		dataset.Labels = metadata.Labels
+
+		dataset := convertToDataset(ds, metadata)
 
 		if includeTable {
 			tables, err := client.FetchTableList(dataset)
@@ -95,6 +85,23 @@ func (client *Client) FetchDatasetList(includeTable bool) ([]*Dataset, error) {
 	}
 
 	return dslist, nil
+}
+
+func convertToDataset(ds *bigquery.Dataset, metadata *bigquery.DatasetMetadata) *Dataset {
+	dataset := &Dataset{}
+
+	dataset.ProjectID = ds.ProjectID
+	dataset.DatasetID = ds.DatasetID
+
+	dataset.CreationTime = metadata.CreationTime
+	dataset.LastModifiedTime = metadata.LastModifiedTime
+	dataset.DefaultTableExpiration = metadata.DefaultTableExpiration
+	dataset.Description = metadata.Description
+	dataset.Name = metadata.Name
+	dataset.Location = metadata.Location
+	dataset.Labels = metadata.Labels
+
+	return dataset
 }
 
 func (client *Client) FetchTableList(dataset *Dataset) ([]*Table, error) {
