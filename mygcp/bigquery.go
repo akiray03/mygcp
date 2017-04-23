@@ -109,8 +109,6 @@ func (client *Client) FetchTableList(dataset *Dataset) ([]*Table, error) {
 
 	it := client.bigquery.Dataset(dataset.DatasetID).Tables(client.ctx)
 	for {
-		table := &Table{}
-
 		tbl, err := it.Next()
 		if err == iterator.Done {
 			break
@@ -119,29 +117,38 @@ func (client *Client) FetchTableList(dataset *Dataset) ([]*Table, error) {
 			return tablelist, err
 		}
 
-		table.ProjectID = tbl.ProjectID
-		table.DatasetID = tbl.DatasetID
-		table.TableID = tbl.TableID
-
 		metadata, err := tbl.Metadata(client.ctx)
 		if err != nil {
 			return tablelist, err
 		}
-		table.Description = metadata.Description
-		table.Name = metadata.Name
-		table.Schema = metadata.Schema
-		table.View = metadata.View
-		table.ID = metadata.ID
-		table.Type = metadata.Type
-		table.ExpirationTime = metadata.ExpirationTime
-		table.CreationTime = metadata.CreationTime
-		table.LastModifiedTime = metadata.LastModifiedTime
-		table.NumBytes = metadata.NumBytes
-		table.NumRows = metadata.NumRows
-		table.TimePartitioning = metadata.TimePartitioning
+
+		table := convertToTable(tbl, metadata)
 
 		tablelist = append(tablelist, table)
 	}
 
 	return tablelist, nil
+}
+
+func convertToTable(tbl *bigquery.Table, metadata *bigquery.TableMetadata) *Table {
+	table := &Table{}
+
+	table.ProjectID = tbl.ProjectID
+	table.DatasetID = tbl.DatasetID
+	table.TableID = tbl.TableID
+
+	table.Description = metadata.Description
+	table.Name = metadata.Name
+	table.Schema = metadata.Schema
+	table.View = metadata.View
+	table.ID = metadata.ID
+	table.Type = metadata.Type
+	table.ExpirationTime = metadata.ExpirationTime
+	table.CreationTime = metadata.CreationTime
+	table.LastModifiedTime = metadata.LastModifiedTime
+	table.NumBytes = metadata.NumBytes
+	table.NumRows = metadata.NumRows
+	table.TimePartitioning = metadata.TimePartitioning
+
+	return table
 }
