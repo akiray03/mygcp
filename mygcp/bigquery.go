@@ -130,6 +130,18 @@ func (client *Client) FetchTableList(dataset *Dataset) ([]*Table, error) {
 	return tablelist, nil
 }
 
+func (client *Client) FetchTable(datasetID string, tableID string) (*Table, error) {
+	tbl := client.bigquery.Dataset(datasetID).Table(tableID)
+	metadata, err := tbl.Metadata(client.ctx)
+	if err != nil {
+		return &Table{}, err
+	}
+
+	table := convertToTable(tbl, metadata)
+
+	return table, nil
+}
+
 func convertToTable(tbl *bigquery.Table, metadata *bigquery.TableMetadata) *Table {
 	table := &Table{}
 

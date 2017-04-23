@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/dustin/go-humanize"
 	"github.com/pkg/errors"
 )
@@ -11,6 +12,11 @@ import (
 type BigqueryTableLsOptions struct {
 	Quiet  bool
 	Fields []string
+}
+
+type BigqueryTableShowOptions struct {
+	DatasetID string
+	TableID   string
 }
 
 func (client *Client) BigqueryTableLs(options *BigqueryTableLsOptions) error {
@@ -105,4 +111,46 @@ func formatBqTableCreationTime(client *Client, options *BigqueryTableLsOptions, 
 
 func formatBqTableLastModified(client *Client, options *BigqueryTableLsOptions, table *Table) string {
 	return table.LastModifiedTime.Format("2006-01-02")
+}
+
+func (client *Client) BigqueryTableShow(options *BigqueryTableShowOptions) error {
+	table, err := client.FetchTable(options.DatasetID, options.TableID)
+	if err != nil {
+		return errors.Wrap(err, "FetchTable failed:")
+	}
+
+	fmt.Fprintf(client.stdout, "%#v\n\n", table)
+
+	for _, schema := range table.Schema {
+		fmt.Fprintf(client.stdout, "%#v\n", schema)
+	}
+
+	fmt.Fprintln(client.stdout, formatTableSchema(table.Schema))
+
+	return nil
+}
+
+func formatTableSchema(schema bigquery.Schema) string {
+	maxLength := maxLengthOfSchemaName(&schema)
+
+	var output []string
+	for _, fieldSchema := range schema {
+		output = append(output, formatTableFieldSchema(fieldSchema, maxLength))
+	}
+
+	return strings.Join(output[:], "\n")
+}
+
+func formatTableFieldSchema(fieldSchema *bigquery.FieldSchema, maxLength int) string {
+	return fmt.Sprintf("%s\t%s", fieldSchema.Type, fieldSchema.Name)
+}
+
+func maxLengthOfSchemaName(schema *bigquery.Schema) int {
+	maxLength := 0
+	for _, fieldSchema := range *schema {
+		if len(fieldSchema.Name) > maxLength {
+			maxLength = len(fieldSchema.Name)
+		}
+	}
+	return maxLength
 }
